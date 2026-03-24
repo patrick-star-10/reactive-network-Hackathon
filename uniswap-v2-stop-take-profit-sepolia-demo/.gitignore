@@ -1,0 +1,10 @@
+.DS_Store
+.env
+cache/
+out/
+
+# Local artifacts not needed for the packaged Demo3 submission
+_archive/
+
+# Nested dependency repos
+lib/**/.git

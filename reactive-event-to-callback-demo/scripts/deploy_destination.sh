@@ -6,20 +6,26 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 load_env
-require_env "DESTINATION_RPC_URL"
-require_env "CALLBACK_PROXY"
-
+destination_rpc="$(destination_rpc_url)"
+callback_proxy="$(callback_proxy_addr)"
+if [[ -z "${destination_rpc}" ]]; then
+  echo "Missing required env var: DESTINATION_RPC or DESTINATION_RPC_URL" >&2
+  exit 1
+fi
+if [[ -z "${callback_proxy}" ]]; then
+  echo "Missing required env var: DESTINATION_CALLBACK_PROXY_ADDR or CALLBACK_PROXY" >&2
+  exit 1
+fi
 destination_key="$(effective_private_key DESTINATION_PRIVATE_KEY)"
-authorized_rvm_id="$(effective_authorized_rvm_id)"
-destination_deploy_amount="${DESTINATION_DEPLOY_AMOUNT:-0.01ether}"
+destination_deploy_amount="${DESTINATION_DEPLOY_AMOUNT:-0.02ether}"
 
 output="$(
-  forge_with_local_solc create src/DestinationCallbackReceiver.sol:DestinationCallbackReceiver \
-    --rpc-url "${DESTINATION_RPC_URL}" \
+  forge_with_local_solc create src/BasicDemoL1Callback.sol:BasicDemoL1Callback \
+    --rpc-url "${destination_rpc}" \
     --private-key "${destination_key}" \
     --broadcast \
     --value "${destination_deploy_amount}" \
-    --constructor-args "${CALLBACK_PROXY}"
+    --constructor-args "${callback_proxy}"
 )"
 
 printf '%s\n' "${output}"
@@ -28,11 +34,11 @@ destination_address="$(printf '%s\n' "${output}" | extract_deployed_to)"
 destination_tx_hash="$(printf '%s\n' "${output}" | extract_tx_hash)"
 
 set_env_value "DESTINATION_CONTRACT" "${destination_address}"
+set_env_value "CALLBACK_ADDR" "${destination_address}"
 set_env_value "DESTINATION_DEPLOY_TX" "${destination_tx_hash}"
-set_env_value "AUTHORIZED_RVM_ID" "${authorized_rvm_id}"
 
 echo
 echo "Updated .env:"
 print_next_env_line "DESTINATION_CONTRACT" "${destination_address}"
+print_next_env_line "CALLBACK_ADDR" "${destination_address}"
 print_next_env_line "DESTINATION_DEPLOY_TX" "${destination_tx_hash}"
-print_next_env_line "AUTHORIZED_RVM_ID" "${authorized_rvm_id}"

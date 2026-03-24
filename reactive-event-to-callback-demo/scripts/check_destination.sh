@@ -6,11 +6,23 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 load_env
-require_env "DESTINATION_RPC_URL"
-require_env "DESTINATION_CONTRACT"
+destination_rpc="$(destination_rpc_url)"
+destination_contract="${CALLBACK_ADDR:-${DESTINATION_CONTRACT:-}}"
+if [[ -z "${destination_rpc}" ]]; then
+  echo "Missing required env var: DESTINATION_RPC or DESTINATION_RPC_URL" >&2
+  exit 1
+fi
+if [[ -z "${destination_contract}" ]]; then
+  echo "Missing required env var: CALLBACK_ADDR or DESTINATION_CONTRACT" >&2
+  exit 1
+fi
 
-echo "lastOriginalSender: $(cast call "${DESTINATION_CONTRACT}" 'lastOriginalSender()(address)' --rpc-url "${DESTINATION_RPC_URL}")"
-echo "lastOriginChainId: $(cast call "${DESTINATION_CONTRACT}" 'lastOriginChainId()(uint256)' --rpc-url "${DESTINATION_RPC_URL}")"
-echo "lastOriginContract: $(cast call "${DESTINATION_CONTRACT}" 'lastOriginContract()(address)' --rpc-url "${DESTINATION_RPC_URL}")"
-echo "mirroredValue: $(cast call "${DESTINATION_CONTRACT}" 'mirroredValue()(uint256)' --rpc-url "${DESTINATION_RPC_URL}")"
-echo "lastOriginTimestamp: $(cast call "${DESTINATION_CONTRACT}" 'lastOriginTimestamp()(uint256)' --rpc-url "${DESTINATION_RPC_URL}")"
+echo "Recent callback events for ${destination_contract}:"
+latest_block="$(cast block-number --rpc-url "${destination_rpc}")"
+from_block="$(( latest_block > 5000 ? latest_block - 5000 : 0 ))"
+
+cast logs \
+  --rpc-url "${destination_rpc}" \
+  --address "${destination_contract}" \
+  --from-block "${from_block}" \
+  --to-block "${latest_block}"

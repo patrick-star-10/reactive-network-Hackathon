@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ROOT_DIR}/.env"
 DEFAULT_SOLC_BIN="${ROOT_DIR}/tools/solc-0.8.20"
+RECEIVED_TOPIC0="0x8cabf31d2b1b11ba52dbb302817a3c9c83e4b2a5194d35121ab1354d69f6a4cb"
 
 load_env() {
   if [[ -f "${ENV_FILE}" ]]; then
@@ -38,6 +39,33 @@ effective_private_key() {
   fi
   require_env "PRIVATE_KEY"
   printf '%s\n' "${PRIVATE_KEY}"
+}
+
+first_nonempty() {
+  local name
+  for name in "$@"; do
+    if [[ -n "${!name:-}" ]]; then
+      printf '%s\n' "${!name}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+origin_rpc_url() {
+  first_nonempty "ORIGIN_RPC" "ORIGIN_RPC_URL"
+}
+
+destination_rpc_url() {
+  first_nonempty "DESTINATION_RPC" "DESTINATION_RPC_URL"
+}
+
+reactive_rpc_url() {
+  first_nonempty "REACTIVE_RPC" "REACTIVE_RPC_URL"
+}
+
+callback_proxy_addr() {
+  first_nonempty "DESTINATION_CALLBACK_PROXY_ADDR" "CALLBACK_PROXY"
 }
 
 effective_authorized_rvm_id() {
